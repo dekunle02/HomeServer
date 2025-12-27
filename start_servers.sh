@@ -19,6 +19,10 @@ fi
 echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
+# Run migrations
+echo "Running Django migrations..."
+python manage.py migrate
+
 # Run Django server in background on 0.0.0.0 to allow external access
 # This is important for accessing the Pi from other devices
 python manage.py runserver 0.0.0.0:8000 &
