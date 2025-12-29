@@ -2,14 +2,32 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { IoSettings } from 'react-icons/io5'
 import { GrGallery } from 'react-icons/gr'
 import PhotoFrame from '@/components/frame/photo-frame'
+import { useWakeLock } from 'react-screen-wake-lock'
+import { use, useEffect } from 'react'
 
 export const Route = createFileRoute('/')({
   component: App,
 })
 
 function App() {
+  const { released, request, release } = useWakeLock({
+    onRequest: () => console.log('Screen Wake Lock: requested!'),
+    onError: () => console.log('An error happened 💥'),
+    onRelease: () => console.log('Screen Wake Lock: released!'),
+    reacquireOnPageVisible: true,
+  })
+
+  useEffect(() => {
+    request()
+    return () => {
+      release()
+    }
+  }, [])
+
+  console.log('isRequested:', !released)
+
   return (
-    <div className="fxlex flex-col">
+    <div className="flex flex-col">
       <PhotoFrame />
 
       <div className="flex flex-row items-center justify-between mb-5 mt-auto w-full">
