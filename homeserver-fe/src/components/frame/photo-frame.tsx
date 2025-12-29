@@ -7,13 +7,10 @@ import WeatherPanel from './weather-panel'
 
 const SLIDESHOW_INTERVAL = 20 * 60 * 1000 // 20 minutes
 
-// Tiny 1-second silent video encoded as base64 (prevents screen from sleeping)
-const WAKE_LOCK_VIDEO =
-  'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAA0NtZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzEwOCAzMWUxOWY5IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMyAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTMgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAwZYiEACD/2lu4PtiAGCZiIJmO35BneLS4/AKawbwF3gS81VgCN/Hh0WAAAAMAAAMAAAMAtaOBIBWMAADAcGluZW5jIHZlcnNpb249MS4wAAAAAAAAAABIAAAAEAAP//9YAAAFVm1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAoAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAR4dHJhawAAAFx0a2hkAAAAAwAAAAAAAAAAAAAAAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAACgAAAAWgAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAABAAAAKAAAAAAAAQAAAAAD8G1kaWEAAAAgbWRoZAAAAAAAAAAAAAAAAAAAQAAAAgBVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAADm21pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAA1tzdGJsAAAAt3N0c2QAAAAAAAAAAQAAAKdhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAKAAWgBIAAAASAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGP//AAAANWF2Y0MBZAAf/+EAGWdkAB+s2UCYM+XhAAADAAEAAAMAPA8YMZYBAAZo6+PLIsD9+PgAAAAAHHV1aWRraEDyXyRPxbo5pRvPAyPzAAAAAAAAABhzdHRzAAAAAAAAAAEAAAABAAACAAAAAABYY3R0cwAAAAAAAAAQAAAAAQAABAAAAAABAAAKAAAAAAEAAAQAAAAAAQAAAAAAAAABAAACAAAAAAEAAAoAAAAAAQAABAAAAAABAAAAAAAAAAEAAAIAAAAAAQAACgAAAAABAAAEAAAAAAEAAAAAAAAAAQAAAgAAAAA0c3RzcwAAAAAAAAACAAAAAQAAAA4AAAAsc2R0cAAAAQAAAAIAABAAAAwAAAAIAAAQAAAAFHN0c3oAAAAAAAAAAAAAAAEAAAMHAAAAFHN0Y28AAAAAAAAAAQAAADAAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYwLjMuMTAw'
-
 export default function PhotoFrame() {
   const [currentFrame, setCurrentFrame] = useState<Frame | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const wakeLockStartedRef = useRef(false)
 
   // Queries
@@ -30,11 +27,28 @@ export default function PhotoFrame() {
   // Function to start wake lock video (must be called from user interaction)
   const startWakeLock = useCallback(() => {
     const video = videoRef.current
-    console.log('Attempting to start wake lock video')
-    console.log('videoRef.current:', video)
-    console.log('wakeLockStartedRef', wakeLockStartedRef.current)
+    const canvas = canvasRef.current
+    console.log(
+      'Attempting to start wake lock video',
+      'started ref::',
+      wakeLockStartedRef.current,
+    )
 
-    if (!video || wakeLockStartedRef.current) return
+    if (!video || !canvas || wakeLockStartedRef.current) return
+
+    // Create a stream from the canvas and attach to video
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Draw something on the canvas (just a black pixel)
+    ctx.fillStyle = 'black'
+    ctx.fillRect(0, 0, 1, 1)
+
+    // Create a MediaStream from the canvas
+    const stream = canvas.captureStream(1) // 1 fps is enough
+
+    // Attach the stream to the video element
+    video.srcObject = stream
 
     video
       .play()
@@ -51,9 +65,6 @@ export default function PhotoFrame() {
   // Re-start video when tab becomes visible again
   useEffect(() => {
     const video = videoRef.current
-
-    console.log('useEffect videoRef.current:', video)
-
     if (!video) return
 
     const handleVisibilityChange = () => {
@@ -74,7 +85,7 @@ export default function PhotoFrame() {
 
   // shuffling function callback
   const shuffleFrame = useCallback(() => {
-    // Start wake lock on first user interaction
+    // Start wake lock
     startWakeLock()
 
     if (frames && frames.length > 0) {
@@ -107,13 +118,24 @@ export default function PhotoFrame() {
     }
   }, [frames, currentFrame])
 
+  // Start wake lock video on initial mount
+  useEffect(() => {
+    startWakeLock()
+  }, [startWakeLock])
+
   if (framesLoading) {
     return (
       <>
-        {/* Video to prevent screen sleep - must always be rendered */}
+        {/* Canvas and video to prevent screen sleep - must always be rendered */}
+        <canvas
+          ref={canvasRef}
+          width={1}
+          height={1}
+          className="fixed w-px h-px opacity-0 pointer-events-none"
+          style={{ top: -1, left: -1 }}
+        />
         <video
           ref={videoRef}
-          src={WAKE_LOCK_VIDEO}
           loop
           muted
           playsInline
@@ -127,10 +149,16 @@ export default function PhotoFrame() {
 
   return (
     <div className={`h-screen flex flex-col`}>
-      {/* Video to prevent screen sleep - must be rendered (not display:none) to work */}
+      {/* Canvas and video to prevent screen sleep */}
+      <canvas
+        ref={canvasRef}
+        width={1}
+        height={1}
+        className="fixed w-px h-px opacity-0 pointer-events-none"
+        style={{ top: -1, left: -1 }}
+      />
       <video
         ref={videoRef}
-        src={WAKE_LOCK_VIDEO}
         loop
         muted
         playsInline
