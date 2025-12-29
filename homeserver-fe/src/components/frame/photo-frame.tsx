@@ -14,6 +14,7 @@ const WAKE_LOCK_VIDEO =
 export default function PhotoFrame() {
   const [currentFrame, setCurrentFrame] = useState<Frame | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const wakeLockStartedRef = useRef(false)
 
   // Queries
   const { data: frames, isLoading: framesLoading } = useQuery({
@@ -26,23 +27,41 @@ export default function PhotoFrame() {
     staleTime: 30 * 60 * 1000, // 30 minutes
   })
 
-  // Prevent screen from turning off using hidden video approach
+  // Function to start wake lock video (must be called from user interaction)
+  const startWakeLock = useCallback(() => {
+    const video = videoRef.current
+    console.log('Attempting to start wake lock video')
+    console.log('videoRef.current:', video)
+    console.log('wakeLockStartedRef', wakeLockStartedRef.current)
+
+    if (!video || wakeLockStartedRef.current) return
+
+    video
+      .play()
+      .then(() => {
+        wakeLockStartedRef.current = true
+        console.log('Wake lock video started playing')
+      })
+      .catch((err) => {
+        // Autoplay blocked, will retry on next interaction
+        console.log('Wake lock video failed to play:', err)
+      })
+  }, [])
+
+  // Re-start video when tab becomes visible again
   useEffect(() => {
     const video = videoRef.current
+
+    console.log('useEffect videoRef.current:', video)
+
     if (!video) return
 
-    const playVideo = () => {
-      video.play().catch(() => {
-        // Autoplay might be blocked, try again on user interaction
-      })
-    }
-
-    playVideo()
-
-    // Re-start video when tab becomes visible again
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        playVideo()
+      if (
+        document.visibilityState === 'visible' &&
+        wakeLockStartedRef.current
+      ) {
+        video.play().catch(() => {})
       }
     }
 
@@ -55,6 +74,9 @@ export default function PhotoFrame() {
 
   // shuffling function callback
   const shuffleFrame = useCallback(() => {
+    // Start wake lock on first user interaction
+    startWakeLock()
+
     if (frames && frames.length > 0) {
       setCurrentFrame((prev) => {
         let newFrame = getRandomFrame(frames)
@@ -65,7 +87,7 @@ export default function PhotoFrame() {
         return newFrame
       })
     }
-  }, [frames])
+  }, [frames, startWakeLock])
 
   // Slideshow effect
   useEffect(() => {
@@ -86,19 +108,34 @@ export default function PhotoFrame() {
   }, [frames, currentFrame])
 
   if (framesLoading) {
-    return <Spinner />
+    return (
+      <>
+        {/* Video to prevent screen sleep - must always be rendered */}
+        <video
+          ref={videoRef}
+          src={WAKE_LOCK_VIDEO}
+          loop
+          muted
+          playsInline
+          className="fixed w-px h-px opacity-0 pointer-events-none"
+          style={{ top: -1, left: -1 }}
+        />
+        <Spinner />
+      </>
+    )
   }
 
   return (
     <div className={`h-screen flex flex-col`}>
-      {/* Hidden video to prevent screen sleep */}
+      {/* Video to prevent screen sleep - must be rendered (not display:none) to work */}
       <video
         ref={videoRef}
         src={WAKE_LOCK_VIDEO}
         loop
         muted
         playsInline
-        className="hidden"
+        className="fixed w-px h-px opacity-0 pointer-events-none"
+        style={{ top: -1, left: -1 }}
       />
       <img
         src={currentFrame?.photo}

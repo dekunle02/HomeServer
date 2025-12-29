@@ -39,7 +39,7 @@ export default function WeatherPanel() {
   }, [WEATHER_REFRESH_INTERVAL])
 
   return (
-    <div className="mt-10 flex flex-col">
+    <div className="mt-5 flex flex-col">
       <div className="flex flex-row items-center justify-between">
         {/* current temperature and feels like */}
         <div className="flex flex-col">
@@ -185,14 +185,6 @@ async function fetchWeather(): Promise<WeatherData> {
   )
 
   const nextNPrecHrs = rainHr - currentHour
-  console.log(
-    'rainHr:',
-    rainHr,
-    'currentHour:',
-    currentHour,
-    'rainProb',
-    rainProb,
-  )
   const rainPrediction = pluralize('hour', 'hours', nextNPrecHrs)
   const rainPredictionStr = 'in next ' + nextNPrecHrs + ' ' + rainPrediction
 
