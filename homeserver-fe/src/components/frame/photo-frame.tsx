@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { API_CLIENT } from '@/utils'
 import type { Frame } from '@/models'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Spinner from '../common/spinner'
 import WeatherPanel from './weather-panel'
 
@@ -9,6 +9,7 @@ const SLIDESHOW_INTERVAL = 20 * 60 * 1000 // 20 minutes
 
 export default function PhotoFrame() {
   const [currentFrame, setCurrentFrame] = useState<Frame | null>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
   // Queries
   const { data: frames, isLoading: framesLoading } = useQuery({
@@ -23,12 +24,29 @@ export default function PhotoFrame() {
 
   // Prevent screen from turning off
   useEffect(() => {
-    let wakeLock: WakeLockSentinel | null = null
-
     const requestWakeLock = async () => {
+      // Release existing wake lock before requesting a new one
+      if (wakeLockRef.current) {
+        try {
+          await wakeLockRef.current.release()
+          wakeLockRef.current = null
+        } catch {
+          // Ignore release errors
+        }
+      }
+
       try {
         if ('wakeLock' in navigator) {
-          wakeLock = await navigator.wakeLock.request('screen')
+          wakeLockRef.current = await navigator.wakeLock.request('screen')
+
+          // Listen for when the wake lock is released by the browser
+          wakeLockRef.current.addEventListener('release', () => {
+            wakeLockRef.current = null
+            // Try to re-acquire if page is still visible
+            if (document.visibilityState === 'visible') {
+              requestWakeLock()
+            }
+          })
         }
       } catch (err) {
         console.log('Wake Lock error:', err)
@@ -47,7 +65,8 @@ export default function PhotoFrame() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      wakeLock?.release()
+      wakeLockRef.current?.release()
+      wakeLockRef.current = null
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
