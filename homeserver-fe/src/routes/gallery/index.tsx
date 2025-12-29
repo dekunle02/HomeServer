@@ -83,6 +83,7 @@ function PhotoUploadButton({ className }: PhotoUploadButtonProps) {
       <Button
         className={`text-3xl! px-10 backdrop-blur-sm ${className}`}
         variant="tonal"
+        loading={uploadPending}
         onClick={handleClick}
       >
         <IoAdd />
@@ -105,8 +106,8 @@ function PhotoViewDialog({ frame }: PhotoViewDialogProps) {
     mutationFn: () => API_CLIENT.delete(`/api/core/frames/${frame.id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['frames'] })
-      popup?.dismiss()
       toast?.success('Photo deleted')
+      popup?.dismiss()
     },
     onError: () => {
       toast?.error('Failed to delete photo')

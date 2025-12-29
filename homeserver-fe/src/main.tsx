@@ -38,11 +38,11 @@ if (rootElement && !rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <ToastProvider>
-            <PopupProvider>
+          <PopupProvider>
+            <ToastProvider>
               <RouterProvider router={router} />
-            </PopupProvider>
-          </ToastProvider>
+            </ToastProvider>
+          </PopupProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </StrictMode>,

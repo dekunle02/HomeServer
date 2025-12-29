@@ -23,6 +23,10 @@ class FrameViewSet(viewsets.ModelViewSet):
             # Get the original filename without extension as the name
             name = os.path.splitext(photo.name)[0]
 
+            # Skip if a frame with this name already exists
+            if Frame.objects.filter(name=name).exists():
+                continue
+
             frame = Frame.objects.create(name=name, photo=photo)
             created_frames.append(frame)
 
