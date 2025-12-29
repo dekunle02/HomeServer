@@ -10,7 +10,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", get_random_secret_key())
 
 DEBUG = True
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.39"]
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "htpp://192.168.0.137:3000"]
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://192.168.0.39:3000"]
 
 # Application definition
 
@@ -27,7 +27,17 @@ INSTALLED_APPS = [
     "account",
 ]
 
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ]
+}
+
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
