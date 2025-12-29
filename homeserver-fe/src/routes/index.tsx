@@ -3,7 +3,7 @@ import { IoSettings } from 'react-icons/io5'
 import { GrGallery } from 'react-icons/gr'
 import PhotoFrame from '@/components/frame/photo-frame'
 import { useWakeLock } from 'react-screen-wake-lock'
-import { use, useEffect } from 'react'
+import { useEffect } from 'react'
 
 export const Route = createFileRoute('/')({
   component: App,
@@ -25,9 +25,8 @@ function App() {
   }, [])
 
   console.log('isRequested:', !released)
-
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" onClick={() => request()}>
       <PhotoFrame />
 
       <div className="flex flex-row items-center justify-between mb-5 mt-auto w-full">
